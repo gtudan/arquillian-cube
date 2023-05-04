@@ -6,7 +6,7 @@ jobs:
         type: string
     working_directory: ~/circleci-arquillian-cube
     docker:
-      - image: circleci/openjdk:<< parameters.jdk-version >>
+      - image: openjdk:<< parameters.jdk-version >>
     steps:
       - checkout
       - restore_cache:

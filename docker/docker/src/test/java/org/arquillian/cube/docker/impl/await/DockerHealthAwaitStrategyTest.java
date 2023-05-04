@@ -3,10 +3,12 @@ package org.arquillian.cube.docker.impl.await;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.core.DockerClientBuilder;
 import com.github.dockerjava.core.command.BuildImageResultCallback;
+
 import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+
 import org.arquillian.cube.docker.impl.client.config.Await;
 import org.arquillian.cube.docker.impl.docker.DockerClientExecutor;
 import org.arquillian.cube.spi.Cube;
@@ -22,6 +24,7 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
+import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -46,10 +49,20 @@ public class DockerHealthAwaitStrategyTest {
 
     @BeforeClass
     public static void createDockerClient() {
-        if (!System.getenv().containsKey(DOCKER_HOST) || System.getenv(DOCKER_HOST).equals("")){
+        if (!System.getenv().containsKey(DOCKER_HOST) || System.getenv(DOCKER_HOST).equals("")) {
             environmentVariables.set(DOCKER_HOST, "unix:///var/run/docker.sock");
         }
         dockerClient = DockerClientBuilder.getInstance().build();
+
+        boolean dockerAvailable = true;
+        try {
+            dockerClient.pingCmd().exec();
+        } catch (Exception e) {
+            // docker is not available - skip test
+            dockerAvailable = false;
+        }
+        assumeTrue(dockerAvailable);
+
         healthSuccessImageId = dockerBuild("DockerHealthAwait/HealthSuccess/Dockerfile");
         healthFailureImageId = dockerBuild("DockerHealthAwait/HealthFailure/Dockerfile");
     }
@@ -86,22 +99,22 @@ public class DockerHealthAwaitStrategyTest {
 
     @Test
     public void shouldSuccessCustomExec() {
-        verifyAwait(healthFailureImageId, true, new String[] {"true"});
+        verifyAwait(healthFailureImageId, true, new String[]{"true"});
     }
 
     @Test
     public void shouldSuccessWithLongCommands() {
-        verifyAwait(healthFailureImageId, true, new String[] {"sh", "-c", "echo start;sleep 2;echo stop"}, "3s");
+        verifyAwait(healthFailureImageId, true, new String[]{"sh", "-c", "echo start;sleep 2;echo stop"}, "3s");
     }
 
     @Test
     public void shouldFailCustomExecFailed() {
-        verifyAwait(healthSuccessImageId, false, new String[] {"sh", "-c", "exit 1"});
+        verifyAwait(healthSuccessImageId, false, new String[]{"sh", "-c", "exit 1"});
     }
 
     @Test
     public void shouldFailNonExistingCommand() {
-        verifyAwait(healthSuccessImageId, false, new String[] {"this command does not exist"});
+        verifyAwait(healthSuccessImageId, false, new String[]{"this command does not exist"});
     }
 
     private static String dockerBuild(String path) {

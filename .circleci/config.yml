@@ -13,8 +13,14 @@ jobs:
           key: circleci-arquillian-cube-{{ checksum "pom.xml" }}
       - run: ./mvnw verify -q -U -DskipTests # pre-fetch dependencies (dependency:resolve fails)
       - run: ./mvnw package
+      - run:
+          name: Save test results
+          command: |
+            mkdir -p ~/test-results/junit/
+            find . -type f -regex ".*/target/surefire-reports/.*xml" -exec cp {} ~/test-results/junit/ \;
+          when: always
       - store_test_results:
-          path: target/surefire-reports
+          path: ~/test-results
       - save_cache:
           paths:
             - ~/.m2
